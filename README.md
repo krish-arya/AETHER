@@ -141,6 +141,14 @@ A full run (3 walk-forward folds × 3 seeds, 10 configurations) was started on
 in `artifacts/experiments/<run_id>/result.json` and on the Experiment Tracking page.
 <!-- experiments:end -->
 
+**Deployment model** (`rl-deployment-45a0448607`, what `POST /rl/allocate` uses).
+Trained on 2020-10-21 → 2025-10-21 and selected on 2025-10-23 → 2026-10-30. Its
+validation Sharpe is −0.97 (the three seeds: −1.12, −0.97, −1.39). The market itself
+fell in that window — a frictionless equal-weight portfolio of the same 20 stocks
+returned −7.8%, Sharpe about −1.04 — so the model roughly tracked the market and shows
+no evidence of skill. It has no out-of-sample test of its own and is registered as a
+`candidate`, not an approved model.
+
 **Scenario generator.** Fails its quality gates: return scale and memorisation checks
 pass, cross-asset correlation and the real-vs-synthetic classifier fail (the classifier
 is 100% accurate). Its market-stress scenarios lose about 3% at worst over 24 sessions;
