@@ -1,0 +1,31 @@
+# Initial real-data universe: 20 liquid NSE large caps (PRD 5.1: "approximately 10-20
+# liquid equities, expanding after the pipeline is validated").
+#
+# !! SURVIVORSHIP BIAS: these names were picked from today's large caps. Companies that
+# !! were large in 2015 and later shrank, merged or delisted are absent, so any backtest
+# !! over this list looks better than it should. Point-in-time index constituents need a
+# !! licensed source.
+#
+# `sector` is a coarse label used for exposure limits and display.
+
+securities:
+  - {symbol: RELIANCE,   name: Reliance Industries,        sector: Energy}
+  - {symbol: TCS,        name: Tata Consultancy Services,  sector: Information Technology}
+  - {symbol: HDFCBANK,   name: HDFC Bank,                  sector: Financials}
+  - {symbol: INFY,       name: Infosys,                    sector: Information Technology}
+  - {symbol: ICICIBANK,  name: ICICI Bank,                 sector: Financials}
+  - {symbol: HINDUNILVR, name: Hindustan Unilever,         sector: Consumer Staples}
+  - {symbol: ITC,        name: ITC,                        sector: Consumer Staples}
+  - {symbol: SBIN,       name: State Bank of India,        sector: Financials}
+  - {symbol: BHARTIARTL, name: Bharti Airtel,              sector: Communication Services}
+  - {symbol: KOTAKBANK,  name: Kotak Mahindra Bank,        sector: Financials}
+  - {symbol: LT,         name: Larsen & Toubro,            sector: Industrials}
+  - {symbol: AXISBANK,   name: Axis Bank,                  sector: Financials}
+  - {symbol: ASIANPAINT, name: Asian Paints,               sector: Materials}
+  - {symbol: MARUTI,     name: Maruti Suzuki India,        sector: Consumer Discretionary}
+  - {symbol: SUNPHARMA,  name: Sun Pharmaceutical,         sector: Health Care}
+  - {symbol: TITAN,      name: Titan Company,              sector: Consumer Discretionary}
+  - {symbol: ULTRACEMCO, name: UltraTech Cement,           sector: Materials}
+  - {symbol: WIPRO,      name: Wipro,                      sector: Information Technology}
+  - {symbol: NESTLEIND,  name: Nestle India,               sector: Consumer Staples}
+  - {symbol: TATASTEEL,  name: Tata Steel,                 sector: Materials}

@@ -1,0 +1,56 @@
+# Dataset build configuration -- consumed by scripts/build_dataset.py
+# Schema: ml/data/config.py (unknown keys are rejected).
+
+dataset:
+  name: synthetic-dev-daily    # becomes the dataset id prefix; rename when using real data
+  start_date: 2015-01-01
+  end_date: 2024-12-31
+  as_of: null                  # knowledge cut-off; null = end_date (keeps builds reproducible)
+
+provider:
+  # synthetic_dev  -> clearly labelled MOCK data for development. Not real market data.
+  # csv_directory  -> CSV exports from a licensed / authorised source that you supply.
+  kind: synthetic_dev
+
+  synthetic_dev:
+    seed: 7
+    n_symbols: 12
+
+  csv_directory:
+    path: data/licensed        # git-ignored; see ml/data/ingestion/csv_provider.py for layout
+    source_name: ""            # REQUIRED for csv_directory, e.g. the vendor / product name
+    license_note: ""           # REQUIRED: the terms under which you may use this data
+
+universe:
+  symbols: null                # null = every security the provider lists (incl. delisted)
+  symbol_map: {}               # historical ticker -> current ticker
+
+validation:
+  return_outlier_zscore: 8.0          # robust z-score (median/MAD) flag threshold
+  unexplained_gap_threshold: 0.35     # |raw return| with no corporate action -> flagged
+  calendar_min_symbol_fraction: 0.5   # only used when the provider has no calendar
+  max_quarantine_fraction: 0.01       # build fails above this share of rejected rows
+
+features:
+  sma_windows: [20, 50]
+  ema_windows: [12, 26]
+  macd: {fast: 12, slow: 26, signal: 9}
+  adx_window: 14
+  rsi_window: 14
+  stochastic: {k: 14, d: 3}
+  roc_window: 10
+  williams_window: 14
+  atr_window: 14
+  bollinger: {window: 20, num_std: 2.0}
+  hist_vol_windows: [20, 60]
+  rolling_std_window: 20
+  obv_window: 20
+  vwap_window: 20
+  mfi_window: 14
+  cum_return_windows: [5, 21, 63]
+  beta_window: 60
+  corr_window: 60
+  trading_days_per_year: 252
+
+output:
+  root: artifacts/datasets

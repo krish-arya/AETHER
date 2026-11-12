@@ -1,0 +1,109 @@
+# Backtest configuration -- consumed by scripts/run_backtest.py
+# Schema: ml/backtesting/config.py (unknown keys are rejected).
+
+name: baselines
+
+# Dataset snapshot built by scripts/build_dataset.py. Override on the command line
+# with --dataset <dir> or --latest.
+dataset: artifacts/datasets/REPLACE-WITH-DATASET-ID
+start_date: null               # null = first session in the dataset
+end_date: null                 # null = last session in the dataset
+
+initial_capital: 1000000       # rupees
+rebalance: monthly             # daily | weekly | monthly | quarterly
+execution_price: open          # decisions at the close of T execute at the open of T+1
+participation_limit: 0.05      # max share of a day's traded value per order; null = no cap
+allow_fractional_shares: true
+min_trade_value: 0             # skip orders smaller than this (rupees)
+delisting_recovery: 1.0        # share of last close recovered when a holding delists
+
+# ASSUMPTION -- annual risk-free rate for Sharpe / Sortino / alpha. Set it for the period
+# you study (e.g. the average 91-day T-bill yield). 0.065 is a placeholder, not data.
+risk_free_rate: 0.065
+periods_per_year: 252
+
+# --------------------------------------------------------------------------- costs
+# Indian cash-equity DELIVERY trades. Rates are fractions of traded value (0.001 = 0.1%).
+#
+# !! INDICATIVE VALUES. Verify against current NSE / SEBI / broker schedules before
+# !! relying on results. Known simplifications:
+# !!  - small NSE transaction-charge and SEBI-fee revisions between 2021 and 2024 are
+# !!    not itemised;
+# !!  - stamp duty before 1 July 2020 was state-specific (a Maharashtra-like rate is used);
+# !!  - service tax before GST (1 July 2017) stepped up over time (15% is used).
+# STT at 0.1% on both sides dominates, so these simplifications move total cost only slightly.
+costs:
+  slippage_bps: 5                # ASSUMPTION: adverse move per side, in basis points
+  brokerage:
+    rate: 0.0003                 # ASSUMPTION: 0.03% per order ...
+    min_per_order: 0
+    max_per_order: 20            # ... capped at Rs 20 (discount-broker style)
+  flat_per_sell_order: 0         # e.g. depository (DP) charge per sell; broker-specific
+  statutory:
+    - effective_from: 2012-07-01
+      stt_buy: 0.001
+      stt_sell: 0.001
+      exchange_txn: 0.0000325
+      sebi_fee: 0.000001
+      stamp_duty_buy: 0.0001
+      stamp_duty_sell: 0.0001
+      gst: 0.15                  # service tax era
+    - effective_from: 2017-07-01
+      stt_buy: 0.001
+      stt_sell: 0.001
+      exchange_txn: 0.0000325
+      sebi_fee: 0.000001
+      stamp_duty_buy: 0.0001
+      stamp_duty_sell: 0.0001
+      gst: 0.18
+    - effective_from: 2020-07-01   # uniform stamp duty: 0.015% on the buy side only
+      stt_buy: 0.001
+      stt_sell: 0.001
+      exchange_txn: 0.0000325
+      sebi_fee: 0.000001
+      stamp_duty_buy: 0.00015
+      stamp_duty_sell: 0
+      gst: 0.18
+    - effective_from: 2024-10-01
+      stt_buy: 0.001
+      stt_sell: 0.001
+      exchange_txn: 0.0000297
+      sebi_fee: 0.000001
+      stamp_duty_buy: 0.00015
+      stamp_duty_sell: 0
+      gst: 0.18
+
+# ---------------------------------------------------------------------- strategies
+# Rule-based baselines (not AI). `label` names the strategy in reports.
+strategies:
+  - strategy: equal_weight
+  - strategy: buy_and_hold
+  - strategy: momentum
+    params: {lookback: 126, skip: 21, top_k: 4}
+  - strategy: moving_average
+    params: {window: 200}
+  - strategy: mean_variance
+    params: {lookback: 252, objective: mean_variance, risk_aversion: 5.0, shrinkage: 0.2, max_weight: 0.35}
+  - strategy: mean_variance
+    label: min_variance
+    params: {lookback: 252, objective: min_variance, shrinkage: 0.2, max_weight: 0.35}
+
+# Strategy the others are compared against. NIFTY 50 TRI is the intended benchmark but
+# needs licensed index data; until then the equal-weight universe portfolio is used.
+benchmark: equal_weight
+
+walk_forward:
+  enabled: true
+  train_years: 5
+  validation_years: 1
+  test_years: 1
+  step_years: 1
+  embargo_sessions: 5
+
+bootstrap:                      # block bootstrap for Sharpe-difference intervals
+  samples: 2000
+  block_sessions: 21
+  confidence: 0.95
+  seed: 7
+
+output_root: artifacts/backtests

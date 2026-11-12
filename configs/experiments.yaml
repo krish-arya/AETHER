@@ -1,0 +1,81 @@
+# Research experiments (PRD 20) -- consumed by scripts/run_experiments.py
+# Schema: ml/fusion/experiments.py, ml/rl/config.py, ml/gan/config.py.
+#
+# Costs, capital, risk-free rate, walk-forward windows and bootstrap settings come from
+# `backtest` (configs/backtesting.yaml) so that every strategy is judged on the same terms.
+#
+# Compute: CPU only. With the values below a full run trains
+#   folds x seeds x (RL experiments)  PPO agents  +  one TimeGAN per fold.
+
+name: aether-experiments
+dataset: artifacts/datasets/REPLACE-WITH-DATASET-ID   # or pass --dataset / --latest
+backtest: configs/backtesting.yaml
+
+# E0 equal weight | E1 momentum | E2 RL | E3 RL+LLM | E4 RL+GAN | E5 RL+GAN+LLM |
+# E6 + attention fusion | A_no_regime | A_no_synthetic | A_no_risk_penalty
+# E3 and E5 need a historical news feature table (`news_features`) and are skipped without one.
+experiments: [E0, E1, E2, E3, E4, E5, E6, A_no_regime, A_no_synthetic, A_no_risk_penalty]
+max_folds: 3                 # most recent walk-forward folds; null = all
+augmentation_markets: 2      # GAN-generated markets added to RL training
+augmentation_sessions: 756
+news_features: null
+
+rl:
+  algorithm: ppo             # ppo | sac
+  groups: [market, regime]   # overridden per experiment
+  fusion: early              # overridden per experiment
+  seeds: [0, 1, 2]
+  eval_every: 10000          # validation checkpoints
+  torch_threads: 4
+  env:
+    rebalance_every: 5       # sessions between decisions (weekly)
+    episode_steps: 52
+    logit_scale: 4.0
+    reference_capital: 1000000
+  reward:                    # starting values; A_no_risk_penalty measures their effect
+    kind: risk_adjusted      # log_return | risk_adjusted | drawdown_change
+    lambda_volatility: 0.1
+    lambda_drawdown: 0.02
+    lambda_turnover: 0.002
+    scale: 100.0
+  ppo:
+    total_timesteps: 40000
+    n_steps: 512
+    batch_size: 128
+    n_epochs: 10
+    learning_rate: 0.0003
+    gamma: 0.99
+    gae_lambda: 0.95
+    ent_coef: 0.005
+    clip_range: 0.2
+    net_arch: [128, 128]
+  limits:                    # risk engine -- applied to EVERY strategy, baselines included
+    max_weight: 0.20
+    max_sector_weight: 0.40
+    min_cash: 0.02
+    min_adv: 0
+    max_drawdown: 0.25
+    drawdown_exposure_cap: 0.5
+    max_turnover: 0.5
+
+gan:
+  sequence_length: 24
+  hidden_dim: 48
+  num_layers: 2
+  noise_dim: 32
+  batch_size: 128
+  learning_rate: 0.001
+  embedding_iterations: 600
+  supervised_iterations: 600
+  joint_iterations: 600
+  calibrate_moments: true
+  evaluation_windows: 1000
+  gates:                     # judgement calls; a failed gate is reported, not hidden
+    max_return_ks: 0.10
+    max_correlation_error: 0.15
+    max_discriminative_score: 0.25
+    min_memorization_ratio: 0.6
+    max_copied_fraction: 0.0
+
+models_root: artifacts/models
+output_root: artifacts/experiments

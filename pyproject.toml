@@ -1,0 +1,91 @@
+[project]
+name = "project-aether"
+version = "0.1.0"
+description = "Integrated GAN + RL + LLM framework for quantitative market intelligence and portfolio optimization (NSE). Research and decision-support platform."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Backend
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29",
+    "aiosqlite>=0.20",
+    "alembic>=1.13",
+    "redis>=5.0",
+    "celery>=5.4",
+    "packaging>=24",  # imported by kombu's Redis transport but not declared by it
+    # Data / feature pipeline
+    "numpy>=1.26",
+    "pandas>=2.2,<3",
+    "pyyaml>=6",
+    "httpx>=0.27",
+    # Models (Phases 4-6). CPU-only PyTorch: see [tool.uv.sources] below.
+    "torch>=2.4",
+    "gymnasium>=1.0",
+    "stable-baselines3>=2.4",
+    "scikit-learn>=1.5",
+    "scipy>=1.13",
+]
+
+# Not included: MLflow (pulls in pyarrow, which the development machine's application
+# control policy blocks) and Optuna. Experiment tracking uses the built-in model
+# registry instead -- see docs/CHECKLIST.md.
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+]
+
+# CPU-only PyTorch wheels: no GPU on the development machine, and the CPU wheels are
+# several times smaller. Remove this source to get the default (CUDA) builds on Linux.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[tool.uv]
+# Use an installed (python.org / OS / Docker base image) interpreter rather than uv's
+# downloaded standalone builds. Those builds are unsigned and are blocked by Windows
+# Smart App Control / application-control policies; see README "Windows notes".
+python-preference = "only-system"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# Installs two top-level packages: `app` (FastAPI backend) and `ml` (research code).
+packages = ["backend/app", "ml"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests", "tests"]
+addopts = "--import-mode=importlib -ra"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: requires live external services (PostgreSQL / Redis)",
+]
+filterwarnings = [
+    # pandas 2.3 internals on NumPy >= 2.5; not raised by project code.
+    "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["frontend", "artifacts", "notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]  # FastAPI Depends() in argument defaults
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "ml"]

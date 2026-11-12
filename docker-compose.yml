@@ -1,0 +1,110 @@
+# Local development stack.
+#
+#   docker compose up -d --build        # start everything
+#   docker compose ps                   # health of each service
+#   docker compose down                 # stop (add -v to also delete the database volume)
+#
+# Ports are published on 127.0.0.1 only: the default credentials below are for local
+# development and must never be reachable from the network. Override any value in a
+# local .env file (see .env.example).
+
+name: aether
+
+x-backend-environment: &backend-environment
+  AETHER_ENVIRONMENT: ${AETHER_ENVIRONMENT:-local}
+  AETHER_LOG_LEVEL: ${AETHER_LOG_LEVEL:-INFO}
+  AETHER_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-aether}:${POSTGRES_PASSWORD:-aether}@postgres:5432/${POSTGRES_DB:-aether}
+  AETHER_REDIS_URL: redis://redis:6379/0
+  AETHER_CORS_ORIGINS: ${AETHER_CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}
+
+x-backend-image: &backend-image
+  build:
+    context: .
+  image: aether-backend:local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aether}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aether}
+      POSTGRES_DB: ${POSTGRES_DB:-aether}
+    ports:
+      - "127.0.0.1:${AETHER_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:${AETHER_REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # One-shot: applies database migrations, then exits.
+  migrate:
+    <<: *backend-image
+    command: ["alembic", "-c", "backend/alembic.ini", "upgrade", "head"]
+    environment: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    <<: *backend-image
+    environment: *backend-environment
+    ports:
+      - "127.0.0.1:${AETHER_API_PORT:-8000}:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  worker:
+    <<: *backend-image
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    environment: *backend-environment
+    volumes:
+      - ./artifacts:/app/artifacts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    image: aether-frontend:local
+    ports:
+      - "127.0.0.1:${AETHER_WEB_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

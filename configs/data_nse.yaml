@@ -1,0 +1,20 @@
+# Real NSE large-cap dataset from Yahoo Finance (free, no API key).
+#
+#   uv run python scripts/build_dataset.py --config configs/data_nse.yaml
+#
+# Read ml/data/ingestion/yahoo.py first: prices are split-adjusted by Yahoo, the
+# universe has survivorship bias, and the source is unofficial. Everything not set here
+# takes the defaults documented in configs/data.yaml.
+
+dataset:
+  name: nse-largecap-daily
+  start_date: 2015-01-01
+  end_date: 2026-10-30       # fixed, so the same config always describes the same data
+
+provider:
+  kind: yahoo_chart
+  yahoo_chart:
+    universe_file: configs/universe_nse_largecap.yaml
+    cache_dir: data/cache/yahoo   # git-ignored raw landing zone
+    exchange_suffix: .NS
+    refresh: false                # true = fetch again instead of using cached responses

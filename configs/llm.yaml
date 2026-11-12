@@ -1,0 +1,139 @@
+# LLM financial intelligence engine (Phase 3). Validated by ml/llm/config.py; unknown
+# keys are rejected. See docs/llm-engine.md.
+#
+# The API key is NOT configured here. It is read from the environment / .env:
+#   AETHER_LLM_API_KEY     secret
+#   AETHER_LLM_BASE_URL    overrides provider.base_url
+#   AETHER_LLM_MODEL       overrides provider.model
+#   AETHER_LLM_PROVIDER    overrides provider.name (label only)
+#   AETHER_LLM_EMBEDDING_MODEL
+
+provider:
+  # The values below are the local Ollama server this engine was verified against.
+  name: ollama
+  base_url: http://127.0.0.1:11434/v1
+  model: qwen2.5:3b
+  embedding_model: nomic-embed-text
+  # For OpenAI (NOT verified -- no key was available when this was written), set in .env:
+  #   AETHER_LLM_PROVIDER=openai
+  #   AETHER_LLM_BASE_URL=https://api.openai.com/v1
+  #   AETHER_LLM_MODEL=<model id>
+  #   AETHER_LLM_API_KEY=<key>
+  # and, if the model requires it, max_tokens_param: max_completion_tokens and
+  # temperature: null below.
+  temperature: 0.0
+  max_tokens: 900
+  max_tokens_param: max_tokens
+  seed: null
+  timeout_seconds: 180
+  max_retries: 3
+  backoff_seconds: 1.0
+  structured_output: json_schema   # falls back to json_object if the server rejects it
+
+universe_file: configs/universe_nse_largecap.yaml
+
+# Extra names a company is known by (the name in the universe file always counts).
+# Matching is literal and case-insensitive on whole words -- keep aliases unambiguous.
+company_aliases:
+  RELIANCE: [Reliance Industries Limited, RIL]
+  TCS: [Tata Consultancy]
+  HDFCBANK: [HDFC Bank Limited]
+  INFY: [Infosys Limited]
+  ICICIBANK: [ICICI Bank Limited]
+  HINDUNILVR: [HUL]
+  ITC: [ITC Limited, ITC Ltd]
+  SBIN: [SBI]
+  BHARTIARTL: [Airtel]
+  KOTAKBANK: [Kotak Bank]
+  LT: [L&T, Larsen and Toubro]
+  AXISBANK: [Axis Bank Limited]
+  ASIANPAINT: [Asian Paints Limited]
+  MARUTI: [Maruti Suzuki]
+  SUNPHARMA: [Sun Pharma, Sun Pharmaceutical Industries]
+  TITAN: [Titan Company Limited]
+  ULTRACEMCO: [UltraTech]
+  WIPRO: [Wipro Limited]
+  NESTLEIND: [Nestle India Limited]
+  TATASTEEL: [Tata Steel Limited]
+
+# Phrases that contain an alias above but name a different listed company. They are
+# masked before alias matching (found in the first live run: "SBI Cards" matched "SBI").
+alias_exclusions:
+  - SBI Cards
+  - SBI Card
+  - SBI Life
+  - HDFC Life
+  - HDFC International Life
+  - HDFC Asset Management
+  - ICICI Prudential
+  - ICICI Lombard
+  - ICICI Securities
+  - ICICI Life
+  - Kotak Mahindra Life
+  - Reliance Power
+  - Reliance Infrastructure
+  - Reliance Capital
+
+# Foreign tickers of the same company that news sources tag items with (US ADRs).
+ticker_aliases:
+  HDB: HDFCBANK
+  IBN: ICICIBANK
+  WIT: WIPRO
+
+yahoo_news:
+  cache_dir: data/cache/news
+  exchange_suffix: ".NS"
+  news_count: 20
+  query_company_name: true
+  pause_seconds: 0.5
+  max_retries: 3
+  refresh: false
+
+dedup:
+  similarity_threshold: 0.8
+  window_hours: 72
+
+extraction:
+  max_article_chars: 6000
+  max_events_per_article: 4
+  max_key_facts: 6
+  min_confidence: 0.5                # below: kept, but reset to event_type "unknown"
+  headline_only_confidence_cap: 0.7
+  hint_only_confidence_cap: 0.4      # company only tagged by the source, not named
+  min_fact_overlap: 0.5
+  injection_policy: quarantine       # or "flag": analyse anyway and only flag
+
+aggregation:
+  market_timezone: Asia/Kolkata
+  market_close: "15:30"
+  max_age_days: 30
+  frequency_window_days: 7
+  # Recency weight = 0.5 ** (age_days / half_life). These are ASSUMPTIONS (PRD 8.5:
+  # some events fade quickly, others have lasting consequences), not fitted values.
+  default_half_life_days: 3
+  half_life_days:
+    dividend: 2
+    product_launch: 3
+    other: 3
+    earnings: 5
+    new_contract: 5
+    fundraising: 7
+    management_change: 10
+    debt: 10
+    regulatory: 15
+    merger_acquisition: 20
+    litigation: 20
+    corporate_governance: 30
+  default_source_reliability: 1.0    # neutral
+  source_reliability: {}             # e.g. {"Some Publisher": 0.5}
+
+retrieval:
+  top_k: 6
+
+summary:
+  max_documents: 8
+  max_points: 5
+  max_document_chars: 1500
+
+output:
+  root: artifacts/news
