@@ -86,6 +86,8 @@ async def test_system_info_exposes_disclaimers_and_module_status(client):
     statuses = {m["key"]: m["status"] for m in body["modules"]}
     # Engines that are not built yet must not be advertised as available.
     assert statuses["data"] == "available"
-    assert statuses["backtesting"] == "available"
-    for key in ("gan", "llm", "rl", "fusion"):
-        assert statuses[key] == "planned"
+    # Hardening (auth, monitoring, deployment) is not done and must not claim otherwise.
+    assert statuses["hardening"] == "planned"
+    summaries = {m["key"]: m["summary"] for m in body["modules"]}
+    assert "FAIL their quality gates" in summaries["gan"]  # stated, not hidden
+    assert "unverified" in summaries["llm"]

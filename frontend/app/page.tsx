@@ -2,8 +2,9 @@ import { Suspense } from "react";
 
 import { BuildStatusPanel } from "@/components/overview/build-status-panel";
 import { DatasetsPanel } from "@/components/overview/datasets-panel";
+import { AlertsPanel, PortfolioPanel, RegimePanel } from "@/components/overview/market-panels";
 import { SystemStatusPanel } from "@/components/overview/system-status-panel";
-import { Panel, PanelSkeleton } from "@/components/ui/panel";
+import { PanelSkeleton } from "@/components/ui/panel";
 
 export default function OverviewPage() {
   return (
@@ -13,17 +14,21 @@ export default function OverviewPage() {
           <SystemStatusPanel />
         </Suspense>
 
-        <Panel title="Portfolio">
-          <p className="text-sm leading-6 text-muted">
-            No portfolio exists yet. Portfolio value, returns, drawdown, allocation and risk
-            indicators appear here once the backtesting engine (Phase 2) and the RL optimizer
-            (Phase 5) produce them. Nothing is shown until then — no placeholder figures.
-          </p>
-        </Panel>
+        <Suspense fallback={<PanelSkeleton title="Paper portfolio" />}>
+          <PortfolioPanel />
+        </Suspense>
       </div>
 
       <Suspense fallback={<PanelSkeleton title="Loaded datasets" className="xl:col-span-2" />}>
         <DatasetsPanel className="xl:col-span-2" />
+      </Suspense>
+
+      <Suspense fallback={<PanelSkeleton title="Alerts" className="xl:col-span-3" />}>
+        <AlertsPanel className="xl:col-span-3" />
+      </Suspense>
+
+      <Suspense fallback={<PanelSkeleton title="Market regime" className="xl:col-span-3" />}>
+        <RegimePanel className="xl:col-span-3" />
       </Suspense>
 
       <Suspense

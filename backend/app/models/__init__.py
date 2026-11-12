@@ -10,15 +10,20 @@ from app.models.market import (
     TechnicalFeature,
 )
 from app.models.news import FinancialNews, NewsEvent
+from app.models.platform import Allocation, Job, PaperAccount, PaperOrder
 
 __all__ = [
+    "Allocation",
     "BacktestRun",
     "CorporateAction",
     "DatasetVersion",
     "FinancialNews",
+    "Job",
     "MarketData",
     "MarketRegime",
     "NewsEvent",
+    "PaperAccount",
+    "PaperOrder",
     "Security",
     "TechnicalFeature",
 ]

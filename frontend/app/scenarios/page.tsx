@@ -1,31 +1,23 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { PlannedModule } from "@/components/ui/planned-module";
+import { GanExplorer } from "@/components/scenarios/gan-explorer";
+import { Panel, PanelSkeleton } from "@/components/ui/panel";
 
 export const metadata: Metadata = { title: "GAN Scenario Explorer" };
 
-export default function ScenariosPage() {
+export default function Page() {
   return (
-    <PlannedModule
-      title="GAN Scenario Explorer"
-      phase={4}
-      phaseName="GAN Engine"
-      summary="Regime-conditioned synthetic market scenarios from a TimeGAN baseline, evaluated statistically against history and checked for memorisation. Scenarios are for stress testing and robustness — never a price forecast."
-      willShow={[
-        "Historical vs synthetic return distributions",
-        "Synthetic price trajectories",
-        "Volatility comparisons",
-        "Cross-asset correlation matrices",
-        "Stress scenarios",
-        "Regime-specific distributions",
-        "Evaluation metrics per model run",
-        "Clear labelling of all synthetic data",
-      ]}
-      dependsOn={[
-        "Validated real historical dataset (Phase 1)",
-        "Market regime classifier (Phase 2)",
-        "PyTorch training pipeline and model registry",
-      ]}
-    />
+    <div className="space-y-4">
+      <Suspense fallback={<PanelSkeleton title="GAN Scenario Explorer" />}>
+        <GanExplorer />
+      </Suspense>
+
+      <Panel title="Not built yet on this page">
+        <p className="max-w-3xl text-sm leading-6 text-muted">
+          Charts of synthetic price paths, correlation matrices and regime-specific distributions. Everything generated here is synthetic and labelled so: scenarios are for stress tests and robustness checks, never forecasts.
+        </p>
+      </Panel>
+    </div>
   );
 }

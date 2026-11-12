@@ -1,31 +1,23 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { PlannedModule } from "@/components/ui/planned-module";
+import { Optimizer } from "@/components/optimizer/optimizer";
+import { Panel, PanelSkeleton } from "@/components/ui/panel";
 
 export const metadata: Metadata = { title: "RL Portfolio Optimizer" };
 
-export default function OptimizerPage() {
+export default function Page() {
   return (
-    <PlannedModule
-      title="RL Portfolio Optimizer"
-      phase={5}
-      phaseName="RL Portfolio Optimization"
-      summary="Target allocations from a reinforcement-learning agent (PPO first, SAC as an alternative) trained in a Gymnasium portfolio environment. Every allocation passes through deterministic risk controls before it is shown."
-      willShow={[
-        "Current portfolio",
-        "Recommended target allocation",
-        "Cash allocation",
-        "Asset-level weights",
-        "Portfolio risk",
-        "Rebalancing recommendations",
-        "Comparison with the previous allocation",
-        "Evidence behind each allocation",
-      ]}
-      dependsOn={[
-        "Backtesting engine and cost model (Phase 2)",
-        "Trading environment and trained agent",
-        "Independent risk engine",
-      ]}
-    />
+    <div className="space-y-4">
+      <Suspense fallback={<PanelSkeleton title="RL Portfolio Optimizer" />}>
+        <Optimizer />
+      </Suspense>
+
+      <Panel title="How to read this page">
+        <p className="max-w-3xl text-sm leading-6 text-muted">
+          The allocation comes from a reinforcement-learning policy and is always passed through the deterministic risk engine. The explanation is assembled from the model&apos;s actual output; sensitivities are statistical associations, not causes. Whether this kind of model beats simple strategies is what the Experiment Tracking page reports.
+        </p>
+      </Panel>
+    </div>
   );
 }

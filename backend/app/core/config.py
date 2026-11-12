@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     backtest_config: Path = Path("configs/backtesting.yaml")
     # Simple back-pressure on an expensive endpoint until real rate limiting (Phase 8).
     max_active_backtests: int = 4
+    # RL / GAN settings shared with the research experiments.
+    experiments_config: Path = Path("configs/experiments.yaml")
+    max_active_jobs: int = 2
     health_check_timeout_seconds: float = 2.0
 
     # LLM engine (Phase 3): any OpenAI-compatible endpoint. Unset => POST /news/analyze

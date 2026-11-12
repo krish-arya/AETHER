@@ -48,8 +48,7 @@ export function Sidebar() {
       </nav>
 
       <p className="mt-auto hidden px-4 py-4 text-[11px] leading-4 text-faint md:block">
-        Pages tagged P<span className="num">n</span> are not built yet; the tag is the roadmap
-        phase that delivers them.
+        Simulation and research only. Nothing on these pages places a real order.
       </p>
     </aside>
   );

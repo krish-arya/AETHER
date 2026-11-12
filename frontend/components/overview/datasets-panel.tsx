@@ -35,7 +35,7 @@ function DatasetCard({ dataset }: { dataset: DatasetVersion }) {
     <article>
       <div className="flex flex-wrap items-center gap-2">
         <span className="num text-sm break-all text-text">{dataset.dataset_id}</span>
-        {dataset.is_synthetic ? <SyntheticBadge /> : <Badge tone="ok">Licensed source</Badge>}
+        {dataset.is_synthetic ? <SyntheticBadge /> : <Badge tone="ok">Real market data</Badge>}
       </div>
       <p className="mt-2 text-xs leading-5 text-muted">{dataset.license_note}</p>
 

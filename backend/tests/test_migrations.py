@@ -18,6 +18,10 @@ EXPECTED_TABLES = {
     "market_regimes",
     "financial_news",
     "news_events",
+    "allocations",
+    "paper_accounts",
+    "paper_orders",
+    "jobs",
 }
 
 

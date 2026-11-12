@@ -92,7 +92,9 @@ def replay(
         cost_model=cost_model,
         config=SimulationConfig(initial_capital=initial_capital),
     )
-    return PaperState(result, managed, _order_status(orders or [], result, managed, sessions), sessions[-1])
+    return PaperState(
+        result, managed, _order_status(orders or [], result, managed, sessions), sessions[-1]
+    )
 
 
 def _order_status(
@@ -110,7 +112,10 @@ def _order_status(
         position = sessions.searchsorted(day)
         in_range = position < len(sessions) and sessions[position] == day
         if not in_range:
-            status[order.order_id] = {"status": "rejected", "detail": "not a session of this account"}
+            status[order.order_id] = {
+                "status": "rejected",
+                "detail": "not a session of this account",
+            }
             continue
         if position == len(sessions) - 1:
             status[order.order_id] = {
@@ -130,13 +135,19 @@ def _order_status(
         applied = decision.get("applied") or []
         note = f"risk engine applied: {', '.join(applied)}" if applied else None
         if "no_bar_on_execution" in set(blocked["event"]):
-            status[order.order_id] = {"status": "rejected", "detail": "symbol did not trade that day"}
+            status[order.order_id] = {
+                "status": "rejected",
+                "detail": "symbol did not trade that day",
+            }
         elif len(fills):
             filled = float(fills["value"].sum())
             detail = f"filled {fill_day:%Y-%m-%d} for Rs {filled:,.0f}"
             if "partial_fill" in set(blocked["event"]):
                 detail += " (partially: liquidity limit)"
-            status[order.order_id] = {"status": "executed", "detail": "; ".join(x for x in (detail, note) if x)}
+            status[order.order_id] = {
+                "status": "executed",
+                "detail": "; ".join(x for x in (detail, note) if x),
+            }
         else:
             status[order.order_id] = {
                 "status": "executed",

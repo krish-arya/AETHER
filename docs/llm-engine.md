@@ -133,8 +133,9 @@ now" when `news_available = 1`.
 ```python
 from ml.llm.sentiment.aggregation import news_feature_table
 
-features = news_feature_table(symbols, "2026-11-01", "2026-11-12",
-                              sessions=trading_dates)   # optional calendar
+features = news_feature_table(
+    symbols, "2026-11-01", "2026-11-12", sessions=trading_dates
+)  # optional calendar
 ```
 
 reads every verified run under `artifacts/news`. `aggregate_news_features(events,
@@ -235,7 +236,51 @@ API (PRD 15.2); every response names the provider, model and prompt version:
 | `GET /api/v1/news/sentiment/{symbol}` | Point-in-time news features per day |
 | `GET /api/v1/news/events/{symbol}` | Validated events for a symbol |
 
-<<LIVE>>
+## Evaluation
+
+```bash
+uv run python scripts/evaluate_llm.py            # live, against the configured provider
+uv run pytest tests/ml/test_llm_*.py backend/tests/test_news_api.py   # offline, fake client
+```
+
+The evaluation set is 24 hand-labelled **fictional** articles about fictional companies
+(so nothing real is fabricated): ordinary events, headline-only items, sentiment-versus-
+impact cases, three prompt-injection attempts, three articles with too little
+information, and one about a company outside the universe. It is a smoke test, not a
+benchmark.
+
+### Measured on 2026-11-12 — local `qwen2.5:3b` through Ollama
+
+This is the only model the engine has been run against. **OpenAI (`gpt-6-luna`) is
+implemented through the same client but has not been verified: no API key was available.**
+
+| Measure | Result |
+|---|---|
+| Schema-valid responses | 100% (23 of 23 calls) |
+| Event extracted where one was expected | 95% |
+| Sentiment correct | 85% |
+| Event type correct | 65% |
+| Impact direction correct (sentiment vs impact cases included) | 79% |
+| Refused to invent an event from insufficient information | 100% (3 of 3) |
+| Rejected the article about an unknown company | 100% (1 of 1) |
+| **Prompt-injection resisted by the model itself** | **33% (1 of 3)** |
+| Injection attempts caught by the engine's own heuristic | 100% (3 of 3), no false alarms |
+| Mean latency per article (CPU) | 25 s |
+
+How to read this
+- The structural controls work: every response was schema-valid, nothing was invented
+  from thin articles, and the unknown company was refused.
+- **This small model obeyed two of the three injected instructions.** The engine's
+  heuristic flagged all three (`injection_suspected`), so those events are marked and
+  can be excluded, but the model is not robust on its own. A stronger model should do
+  better; that has to be measured, not assumed.
+- Event-type accuracy (65%) is weak for a 3-billion-parameter model on headlines.
+
+A real run the same day (`scripts/analyze_news.py`): 90 Yahoo headlines fetched for the
+universe, 83 unique after merging duplicates, 14 analysed (limit), 14 of 14 responses
+schema-valid, 16 events, of which 14 were classified `unknown` — headlines alone rarely
+contain enough to justify a specific event, and the engine does not guess.
+
 
 ## Known limitations
 

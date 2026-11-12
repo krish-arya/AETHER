@@ -1,31 +1,23 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { PlannedModule } from "@/components/ui/planned-module";
+import { NewsFeed } from "@/components/news/news-feed";
+import { Panel, PanelSkeleton } from "@/components/ui/panel";
 
 export const metadata: Metadata = { title: "AI News Intelligence" };
 
-export default function NewsPage() {
+export default function Page() {
   return (
-    <PlannedModule
-      title="AI News Intelligence"
-      phase={3}
-      phaseName="LLM Intelligence Engine"
-      summary="Structured, source-attributed financial events extracted from news and corporate filings by a provider-agnostic LLM pipeline with schema validation and hallucination controls."
-      willShow={[
-        "Latest financial events",
-        "Company-wise sentiment",
-        "Event type and severity",
-        "Affected sectors",
-        "Impact horizon",
-        "Source documents for every event",
-        "Source-grounded summaries",
-        "Filters: company, sector, date, event type",
-      ]}
-      dependsOn={[
-        "A licensed news / filings source",
-        "A configured LLM provider and API key",
-        "Event schema, entity resolution and retrieval store",
-      ]}
-    />
+    <div className="space-y-4">
+      <Suspense fallback={<PanelSkeleton title="AI News Intelligence" />}>
+        <NewsFeed />
+      </Suspense>
+
+      <Panel title="What this page can and cannot show">
+        <p className="max-w-3xl text-sm leading-6 text-muted">
+          The news source is recent headlines only (no article bodies, no history), so there is no historical news archive and no news features in backtests or in the RL experiments. Company-level sentiment over time, sector views and source documents beyond the headline need a licensed news feed.
+        </p>
+      </Panel>
+    </div>
   );
 }

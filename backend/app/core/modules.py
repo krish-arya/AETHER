@@ -40,39 +40,43 @@ MODULES: tuple[ModuleInfo, ...] = (
         "key": "llm",
         "name": "LLM intelligence engine",
         "phase": 3,
-        "status": "planned",
-        "summary": "News ingestion, event extraction, sentiment, entity mapping, "
-        "source-grounded summaries.",
+        "status": "available",
+        "summary": "Headline ingestion, event extraction with schema / entity / grounding "
+        "checks, point-in-time news features. Verified live with a small local model only; "
+        "OpenAI is configured but unverified (no key). No historical news archive.",
     },
     {
         "key": "gan",
         "name": "GAN scenario engine",
         "phase": 4,
-        "status": "planned",
-        "summary": "TimeGAN baseline, regime-conditioned generation, statistical and "
-        "memorization evaluation.",
+        "status": "available",
+        "summary": "Regime-conditioned TimeGAN, synthetic OHLCV markets, statistical and "
+        "memorisation evaluation. The generators trained so far FAIL their quality gates.",
     },
     {
         "key": "rl",
         "name": "RL portfolio optimizer",
         "phase": 5,
-        "status": "planned",
-        "summary": "Gymnasium environment, PPO/SAC, risk-aware reward, model registry.",
+        "status": "available",
+        "summary": "Gymnasium environment, PPO (SAC selectable), risk-aware rewards, "
+        "independent risk engine, model registry. No hyper-parameter search yet.",
     },
     {
         "key": "fusion",
         "name": "Unified intelligence & explainability",
         "phase": 6,
-        "status": "planned",
-        "summary": "Feature fusion, ablations, multi-regime evaluation, decision evidence.",
+        "status": "available",
+        "summary": "Early / late / attention fusion, experiments E0-E6 with ablations and "
+        "seeds, allocation explanations. News features are not in the experiments (no "
+        "historical news).",
     },
     {
         "key": "paper",
         "name": "Dashboard & paper trading",
         "phase": 7,
-        "status": "in_progress",
-        "summary": "Dashboard shell is live; analytics pages and paper trading follow "
-        "the engines they depend on.",
+        "status": "available",
+        "summary": "Eight dashboard pages on live API data (tables, no charts yet) and "
+        "replay-based paper trading. Simulated only: there is no broker integration.",
     },
     {
         "key": "hardening",

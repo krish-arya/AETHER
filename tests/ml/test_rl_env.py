@@ -1,6 +1,5 @@
 """RL environment, observation builder, projection, reward and training pipeline."""
 
-
 import numpy as np
 import pandas as pd
 import pytest

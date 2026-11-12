@@ -1,31 +1,23 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { PlannedModule } from "@/components/ui/planned-module";
+import { ExperimentsView } from "@/components/experiments/experiments-view";
+import { Panel, PanelSkeleton } from "@/components/ui/panel";
 
 export const metadata: Metadata = { title: "Experiment Tracking" };
 
-export default function ExperimentsPage() {
+export default function Page() {
   return (
-    <PlannedModule
-      title="Experiment Tracking"
-      phase={5}
-      phaseName="RL Portfolio Optimization (model registry)"
-      summary="Every training run with its configuration, dataset version, seeds and metrics, so results can be reproduced and compared — including the runs that did not work."
-      willShow={[
-        "Model versions",
-        "Training runs",
-        "Hyperparameters",
-        "Dataset versions used",
-        "Performance metrics",
-        "Training duration",
-        "Run-to-run comparisons",
-        "Results across random seeds",
-      ]}
-      dependsOn={[
-        "Dataset versioning (Phase 1 — done)",
-        "MLflow tracking server",
-        "Model registry tables",
-      ]}
-    />
+    <div className="space-y-4">
+      <Suspense fallback={<PanelSkeleton title="Experiment Tracking" />}>
+        <ExperimentsView />
+      </Suspense>
+
+      <Panel title="Not built yet on this page">
+        <p className="max-w-3xl text-sm leading-6 text-muted">
+          Loss curves, hyper-parameter comparison across runs and per-fold drill-down. MLflow is not used (it depends on a library this machine&apos;s security policy blocks); the registry is plain JSON model cards under artifacts/models.
+        </p>
+      </Panel>
+    </div>
   );
 }

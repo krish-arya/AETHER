@@ -12,12 +12,12 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Overview", code: "OVW", phase: 1, live: true },
   { href: "/market", label: "Market Intelligence", code: "MKT", phase: 1, live: true },
-  { href: "/news", label: "AI News Intelligence", code: "NWS", phase: 3, live: false },
-  { href: "/scenarios", label: "GAN Scenario Explorer", code: "GAN", phase: 4, live: false },
-  { href: "/optimizer", label: "RL Portfolio Optimizer", code: "RLP", phase: 5, live: false },
+  { href: "/news", label: "AI News Intelligence", code: "NWS", phase: 3, live: true },
+  { href: "/scenarios", label: "GAN Scenario Explorer", code: "GAN", phase: 4, live: true },
+  { href: "/optimizer", label: "RL Portfolio Optimizer", code: "RLP", phase: 5, live: true },
   { href: "/backtest", label: "Backtesting Lab", code: "BKT", phase: 2, live: true },
-  { href: "/experiments", label: "Experiment Tracking", code: "EXP", phase: 5, live: false },
-  { href: "/paper", label: "Paper Trading", code: "PPR", phase: 7, live: false },
+  { href: "/experiments", label: "Experiment Tracking", code: "EXP", phase: 5, live: true },
+  { href: "/paper", label: "Paper Trading", code: "PPR", phase: 7, live: true },
 ];
 
 export function navItemFor(pathname: string): NavItem | undefined {
