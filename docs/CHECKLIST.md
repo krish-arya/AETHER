@@ -17,14 +17,14 @@ _Last updated: 2026-11-12_
 | `uv run ruff check .` | clean |
 | Frontend `tsc --noEmit`, `eslint`, `next build` | clean; 9 static routes |
 | Real dataset build (Yahoo, 20 NSE large caps, 2015 → 2026-10-30) | 58,379 bars, 344 dividends, 41 rows quarantined (placeholder / non-session bars), survivorship flagged |
-| Baseline backtest on real data | runs; equal weight 14.7% CAGR, Sharpe 0.55 (survivorship-biased universe, 6.5% risk-free) |
-| RL environment vs backtest simulator, same policy, real costs | identical to 4 decimals (11.94% vs 11.94%) |
-| Research experiments on real data | <!-- experiments:start -->full run (3 folds × 3 seeds) in progress when this was written; see `artifacts/experiments/`<!-- experiments:end --> |
-| LLM engine, live against local `qwen2.5:3b` | 24-case evaluation and a real 14-article run; see [llm-engine.md](llm-engine.md) |
+| Baseline backtest on real data | runs (`baselines-6ee4aa5fe8b5`); equal weight 15.5% CAGR, Sharpe 0.68 (survivorship-biased universe, 6.5% risk-free) |
+| RL environment vs backtest simulator, same policy, real costs | identical: 11.94% vs 11.94% in the test suite (synthetic market); 13.74% vs 13.74% on real NSE data for 2023, largest daily difference 6e-7 (12.34% with the ₹20 brokerage cap removed) |
+| Research experiments on real data | <!-- experiments:start -->full run `aether-experiments-414391a173ec` (3 folds × 3 seeds): E6 matches equal weight (Sharpe 0.76 vs 0.79, difference −0.01, CI [−0.13, +0.11]); E2, E4 and all ablations significantly worse; E3/E5 skipped (no news history)<!-- experiments:end --> |
+| LLM engine, live against OpenAI `gpt-6-luna` and local `qwen2.5:3b` | 24-case evaluation on both (`gpt-6-luna` 100% on every measure; set too easy to rank strong models) and a real 14-article run with `qwen2.5:3b`; see [llm-engine.md](llm-engine.md) |
 | API + dashboard on SQLite with real data | market, regime, news, allocation, risk, stress test, paper trading verified by request; overview, news, scenarios, paper pages viewed in headless Edge |
 | Docker Compose stack | verified through Phase 2 on 2026-11-11. **Not re-run since** — Docker Desktop was not running when the model engines were finished |
 
-Not verified: OpenAI as the LLM provider (no key); the Compose stack and the worker
+Not verified: OpenAI embeddings; the Compose stack and the worker
 jobs with the model engines; the GitHub Actions workflow (no remote); clicking through
 the dashboard by hand; the cost-schedule rates against official circulars.
 
@@ -64,7 +64,7 @@ Not started: fundamentals (PRD 5.2), macroeconomic data (5.4), `/market/overview
 
 | Deliverable | Status | Evidence / note |
 |---|---|---|
-| Provider-agnostic LLM client, structured output | [~] | One OpenAI-compatible client. Verified against local Ollama; **OpenAI (`gpt-6-luna`) unverified — no key** |
+| Provider-agnostic LLM client, structured output | [x] | One OpenAI-compatible client. Verified against OpenAI `gpt-6-luna` (needs `max_completion_tokens`, default temperature) and local Ollama |
 | News ingestion, de-duplication | [~] | Yahoo headlines (recent only, no bodies) and user JSONL. **No historical news archive** |
 | Event extraction, sentiment, entity mapping, impact | [x] | Schema per PRD 8.3; live run on real headlines |
 | Hallucination controls | [x] | Schema, entity, timestamp, source and grounding checks; rejections recorded with reasons |
@@ -150,8 +150,8 @@ results in the verification snapshot.
 [x] regime conditioning · [x] memorisation checks (quality gates **failed**)
 
 **LLM** — [x] news processed · [x] entities extracted · [x] structured events ·
-[x] source attribution · [x] invalid output rejected or flagged (verified with a local
-model, not OpenAI)
+[x] source attribution · [x] invalid output rejected or flagged (verified with OpenAI
+`gpt-6-luna` and a local model)
 
 **RL** — [x] environment · [x] PPO training · [x] continuous allocation ·
 [x] transaction costs · [x] risk constraints · [x] checkpoints
@@ -183,8 +183,9 @@ MLflow); PyTorch, scikit-learn and SciPy are not.
 **B3 — No GPU.** Training budgets are small (PPO 40,000 steps, TimeGAN 600 iterations
 per phase). Better models need more compute.
 
-**B4 — OpenAI key.** Put `AETHER_LLM_API_KEY` in `.env`, then run
-`scripts/evaluate_llm.py` to measure the configured model before trusting it.
+**B4 — LLM evaluation set too small.** Resolved: the OpenAI key is in place and
+`gpt-6-luna` was evaluated on 2026-11-12. Remaining: it scored 100% on the 24 fictional
+cases, so a larger, harder labelled set (ideally real headlines) is needed to measure it.
 
 **B5 — Memory headroom.** 16 GB RAM, usually 1–3 GB free.
 

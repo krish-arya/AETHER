@@ -234,3 +234,17 @@ def test_config_is_strict_and_environment_overrides_the_provider():
 
     client = OpenAICompatibleClient.from_config(applied.provider, None)
     assert (client.provider, client.model) == (config.provider.name, "model-x")
+
+    # Reasoning-model overrides (gpt-6-luna rejects max_tokens and temperature 0).
+    assert applied.provider.temperature == config.provider.temperature  # unset: kept
+    reasoning = LLMEnvironment(
+        _env_file=None, max_tokens_param="max_completion_tokens", max_tokens=2000,
+        temperature="default",
+    ).apply(config)  # fmt: skip
+    payload = OpenAICompatibleClient.from_config(reasoning.provider, None)._chat_payload(
+        "sys", "user", SCHEMA, mode="json_schema"
+    )
+    assert payload["max_completion_tokens"] == 2000 and "max_tokens" not in payload
+    assert "temperature" not in payload
+    warm = LLMEnvironment(_env_file=None, temperature="0.3").apply(config)
+    assert warm.provider.temperature == 0.3

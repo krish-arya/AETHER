@@ -11,6 +11,7 @@ error instead of writing an empty result that looks like "no news".
 import logging
 from collections import Counter
 from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -51,31 +52,49 @@ def analyze_articles(
     *,
     now: datetime,
     progress: Callable[[int, int, ArticleAnalysis], None] | None = None,
+    workers: int = 1,
 ) -> list[ArticleAnalysis]:
-    """Analyze articles one by one; stop if the provider keeps being unreachable."""
+    """Analyze articles (``workers`` at a time); stop if the provider keeps being
+    unreachable. Results keep the input order whatever ``workers`` is."""
+
+    def attempt(article: NewsArticle) -> ArticleAnalysis | LLMUnavailableError:
+        try:
+            return analyzer.analyze(article, now=now)
+        except LLMUnavailableError as error:
+            return error
+
     results: list[ArticleAnalysis] = []
     consecutive_failures = 0
-    for index, article in enumerate(articles, start=1):
-        try:
-            analysis = analyzer.analyze(article, now=now)
-            if analysis.llm_called:  # an article that needed no model call proves nothing
-                consecutive_failures = 0
-        except LLMUnavailableError as error:
-            consecutive_failures += 1
-            if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
-                raise
-            logger.warning("article %s: %s", article.article_id, error)
-            analysis = ArticleAnalysis(article=article, llm_called=True)
-            analysis.rejections.append(
-                Rejection(
-                    article_id=article.article_id,
-                    reason=RejectionReason.LLM_ERROR,
-                    detail=str(error)[:500],
-                )
-            )
-        results.append(analysis)
-        if progress:
-            progress(index, len(articles), analysis)
+    batch = max(1, workers) * 4
+    pool = ThreadPoolExecutor(max_workers=workers) if workers > 1 else None
+    try:
+        for offset in range(0, len(articles), batch):
+            chunk = articles[offset : offset + batch]
+            outcomes = list(pool.map(attempt, chunk)) if pool else [attempt(a) for a in chunk]
+            for article, outcome in zip(chunk, outcomes, strict=True):
+                if isinstance(outcome, LLMUnavailableError):
+                    consecutive_failures += 1
+                    if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                        raise outcome
+                    logger.warning("article %s: %s", article.article_id, outcome)
+                    analysis = ArticleAnalysis(article=article, llm_called=True)
+                    analysis.rejections.append(
+                        Rejection(
+                            article_id=article.article_id,
+                            reason=RejectionReason.LLM_ERROR,
+                            detail=str(outcome)[:500],
+                        )
+                    )
+                else:
+                    analysis = outcome
+                    if analysis.llm_called:  # an article that needed no call proves nothing
+                        consecutive_failures = 0
+                results.append(analysis)
+                if progress:
+                    progress(len(results), len(articles), analysis)
+    finally:
+        if pool:
+            pool.shutdown(wait=True, cancel_futures=True)
     return results
 
 
@@ -90,6 +109,7 @@ def run_news_pipeline(
     now: datetime | None = None,
     max_articles: int | None = None,
     progress: Callable[[int, int, ArticleAnalysis], None] | None = None,
+    workers: int = 1,
 ) -> NewsRun:
     """Run the whole pipeline once and write ``<output_root>/<run_id>/``.
 
@@ -107,7 +127,7 @@ def run_news_pipeline(
         unique = unique[-max_articles:]
 
     analyzer = NewsAnalyzer(client, master, config.extraction)
-    analyses = analyze_articles(analyzer, unique, now=now, progress=progress)
+    analyses = analyze_articles(analyzer, unique, now=now, progress=progress, workers=workers)
     events = [event for analysis in analyses for event in analysis.events]
     rejections = [r for analysis in analyses for r in analysis.rejections]
 

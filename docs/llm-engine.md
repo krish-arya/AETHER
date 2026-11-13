@@ -58,6 +58,7 @@ Sources:
 |---|---|
 | `YahooNewsSource` | Yahoo Finance search endpoint; free, unofficial, no key. **Headlines only** (title, publisher, link, time, related tickers), **recent items only, no archive**. Personal research use; not for redistribution. Responses are cached per query and UTC day under `data/cache/news`. |
 | `JsonlNewsSource` | One JSON object per line with `headline`, `source`, `published_at` (+ optional `text`, `url`, `symbols`, `article_id`). The route for licensed or archived news with full text. A malformed line is an error, never skipped. |
+| `GoogleNewsSource` | Google News RSS search with `after:`/`before:` date operators; free, unofficial for this use, no key. **Headlines with history** (2017 onwards was used): a relevance-ranked sample of about 20 items per company per month, not a complete archive. `published_at` is moved to 23:59:59 IST on the publication day, so a headline only reaches decisions from the next session. Cached per query and month under `data/cache/google_news`. Used by `scripts/build_news_history.py`. |
 
 Yahoo's search is fuzzy and is not a per-company feed. In the live runs below a query
 for an NSE ticker (`INFY.NS`) returned **no** news at all, while the company name
@@ -249,10 +250,29 @@ impact cases, three prompt-injection attempts, three articles with too little
 information, and one about a company outside the universe. It is a smoke test, not a
 benchmark.
 
-### Measured on 2026-11-12 — local `qwen2.5:3b` through Ollama
+### Measured on 2026-11-12 — OpenAI `gpt-6-luna`
 
-This is the only model the engine has been run against. **OpenAI (`gpt-6-luna`) is
-implemented through the same client but has not been verified: no API key was available.**
+Report: `artifacts/llm_eval/eval-20261112T133110Z-gpt-6-luna/report.json`. Settings:
+`max_completion_tokens` 2000, default temperature (the model rejects both
+`max_tokens` and `temperature: 0`, so runs are **not deterministic**).
+
+| Measure | `gpt-6-luna` | `qwen2.5:3b` (below) |
+|---|---|---|
+| Schema-valid responses | 100% | 100% |
+| Event extracted where expected | 100% | 95% |
+| Sentiment correct | 100% | 85% |
+| Event type correct | 100% | 65% |
+| Impact direction correct | 100% | 79% |
+| Refused to invent from insufficient information | 100% (3/3) | 100% |
+| Rejected the unknown company | 100% (1/1) | 100% |
+| Prompt injection resisted by the model | **100% (3/3)** | 33% |
+| Mean latency per article | 3.8 s | 25 s (CPU) |
+
+A perfect score on 24 hand-labelled fictional cases says the set is now too easy to
+tell strong models apart; it is a smoke test, not a benchmark. Accuracy on real
+headlines has not been measured (there are no labels for them).
+
+### Measured on 2026-11-12 — local `qwen2.5:3b` through Ollama
 
 | Measure | Result |
 |---|---|
@@ -282,6 +302,21 @@ schema-valid, 16 events, of which 14 were classified `unknown` — headlines alo
 contain enough to justify a specific event, and the engine does not guess.
 
 
+## Historical news for the experiments
+
+`scripts/build_news_history.py` builds the news history the research experiments need:
+`fetch` (Google News headlines, 2017–2025), `estimate` (measured token use on a sample,
+projected to the archive), `analyze` (the same validated pipeline, one run per year
+under `artifacts/news_history/`, resumable) and `features` (point-in-time features on
+the dataset's sessions, passed to `run_experiments.py --news-features`).
+
+**Hindsight risk — read before trusting any result built on it.** The headlines are
+from 2017–2025; the model analysing them (`gpt-6-luna`) was trained later and may know
+how each story turned out. Its sentiment and impact judgements can therefore carry
+information that was not available on the day, which no timestamp rule removes. A
+news experiment that beats the benchmark is consistent with hindsight leakage as well
+as with genuine signal, and must be reported that way.
+
 ## Known limitations
 
 - **Headlines only.** The free Yahoo source has no article text, so events from it are
@@ -290,13 +325,11 @@ contain enough to justify a specific event, and the engine does not guess.
   exist only for the days news was collected. **Backtests over past years have no news
   features** (`news_available = 0` throughout) until a licensed archive is supplied
   through `JsonlNewsSource`. No historical news signal has been evaluated.
-- **OpenAI is not verified.** The client implements the OpenAI chat-completions and
-  embeddings API and was verified against Ollama's OpenAI-compatible endpoint. No API
-  key was available, so it has not been run against OpenAI or the model the project
-  intends to use. Hosted models may need `max_tokens_param: max_completion_tokens` or
-  `temperature: null`; both are configurable for that reason.
-- **Verification used a small local model** (`qwen2.5:3b`, CPU). Its quality is
-  reported above and is not representative of a larger model.
+- **OpenAI chat completions are verified; OpenAI embeddings are not.** The evaluation
+  ran against `gpt-6-luna`; retrieval embeddings were verified only with Ollama's
+  `nomic-embed-text`.
+- **`gpt-6-luna` runs are not reproducible call for call**: it only accepts its default
+  temperature, so repeated analyses of one article can differ.
 - **The evaluation set is small, fictional and hand-labelled** — a smoke test of a
   model + prompt, not a benchmark, and not evidence about real news.
 - **Grounding is lexical.** Numbers are matched as digits and facts by word overlap. A

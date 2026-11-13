@@ -20,15 +20,16 @@ Secrets
     written to logs, ``repr`` or error messages.
 
 Verification status
-    Verified live against Ollama. **Not verified against OpenAI**: no API key was
-    available when this was written, so parameter names accepted by a specific hosted
-    model (``max_tokens`` vs ``max_completion_tokens``, ``temperature``) are
-    configurable rather than assumed.
+    Verified live against Ollama and OpenAI (``gpt-6-luna``, 2026-11-12). Parameter
+    names accepted by a hosted model (``max_tokens`` vs ``max_completion_tokens``,
+    ``temperature``) differ, so they are configurable rather than assumed;
+    ``gpt-6-luna`` needs ``max_completion_tokens`` and its default temperature.
 """
 
 import contextlib
 import json
 import logging
+import threading
 import time
 from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
@@ -127,6 +128,9 @@ class OpenAICompatibleClient:
         self.__api_key = api_key or ""
         self._client = client
         self.calls = 0
+        # Token usage reported by the server, summed over calls (for cost estimates).
+        self.usage = {"prompt_tokens": 0, "completion_tokens": 0}
+        self._usage_lock = threading.Lock()
 
     @classmethod
     def from_config(
@@ -273,10 +277,18 @@ class OpenAICompatibleClient:
 
     def _parse_completion(self, response: httpx.Response) -> dict:
         try:
-            choice = response.json()["choices"][0]
+            body = response.json()
+            choice = body["choices"][0]
             message = choice["message"]
         except (ValueError, KeyError, IndexError, TypeError) as error:
             raise LLMResponseError(f"{self.provider} returned a malformed completion") from error
+        usage = body.get("usage") if isinstance(body, dict) else None
+        if isinstance(usage, dict):
+            with self._usage_lock:
+                for key in self.usage:
+                    value = usage.get(key)
+                    if isinstance(value, int):
+                        self.usage[key] += value
         if message.get("refusal"):
             raise LLMResponseError(f"{self.provider} refused the request")
         if choice.get("finish_reason") == "length":

@@ -18,7 +18,7 @@ item, in [docs/CHECKLIST.md](docs/CHECKLIST.md).
 | Bootstrap | Repo, FastAPI, PostgreSQL, Redis, Next.js, Docker Compose, migrations, tests | Done |
 | 1 | Data: provider interface, ingestion, validation, features | Done — real NSE data through Yahoo Finance (free, unofficial) |
 | 2 | Baselines, backtesting, market regimes | Done |
-| 3 | LLM news intelligence | Built; verified with a small local model only — **OpenAI not yet verified** (no key); headlines only, no news history |
+| 3 | LLM news intelligence | Built; verified with OpenAI `gpt-6-luna` and a local model; headlines only, no news history |
 | 4 | GAN scenario engine | Built; **the trained generators fail their quality gates** |
 | 5 | RL portfolio optimizer, risk engine, registry | Built; untuned hyper-parameters |
 | 6 | Fusion, experiments E0–E6, explainability | Built; experiments that need news features cannot run |
@@ -107,11 +107,12 @@ in `.env` (see [.env.example](.env.example)):
 AETHER_LLM_BASE_URL=https://api.openai.com/v1
 AETHER_LLM_MODEL=gpt-6-luna
 AETHER_LLM_API_KEY=...          # never commit this
+AETHER_LLM_MAX_TOKENS_PARAM=max_completion_tokens
+AETHER_LLM_TEMPERATURE=default  # gpt-6-luna accepts only its default temperature
 ```
 
-It has been run only against a local Ollama model (`qwen2.5:3b`). The measured results,
-including that this small model obeyed two of three prompt-injection attempts, are in
-[docs/llm-engine.md](docs/llm-engine.md).
+It has been verified with OpenAI `gpt-6-luna` and a local Ollama model (`qwen2.5:3b`);
+the measured results are in [docs/llm-engine.md](docs/llm-engine.md).
 
 ## Results
 
@@ -136,9 +137,30 @@ statistically distinguishable from it, and it is worse.
 **RL, GAN and fusion experiments** (`scripts/run_experiments.py`).
 
 <!-- experiments:start -->
-A full run (3 walk-forward folds × 3 seeds, 10 configurations) was started on
-2026-11-12 and was still training when this was written. When it finishes the table is
-in `artifacts/experiments/<run_id>/result.json` and on the Experiment Tracking page.
+**RL, GAN and fusion experiments** — run `aether-experiments-414391a173ec`: walk-forward
+test years 2023, 2024 and 2025, 3 training seeds each, after costs. Sharpe difference
+vs equal weight with a paired block-bootstrap 95% confidence interval.
+
+| Experiment | CAGR (mean ± sd across seeds) | Sharpe (range) | Max DD | Sharpe vs E0 (95% CI) |
+|---|---|---|---|---|
+| E0 Equal weight (benchmark) | 15.2% | 0.79 | −14.5% | — |
+| E1 Momentum | 9.2% | 0.26 | −14.9% | −0.53 [−1.13, +0.03], n.s. |
+| E2 RL only | 9.2% ± 4.4 | 0.29 (−0.17 to 0.53) | −15.6% | **−0.49 [−0.75, −0.23]** |
+| E4 RL + GAN | 11.4% ± 3.9 | 0.47 (0.08 to 0.69) | −15.6% | **−0.31 [−0.47, −0.17]** |
+| E6 RL + GAN + attention fusion (no news) | 14.8% ± 0.5 | 0.76 (0.74 to 0.81) | −14.2% | −0.01 [−0.13, +0.11], n.s. |
+| E6 without regime features | 11.4% ± 1.8 | 0.48 | −14.8% | **−0.30 [−0.44, −0.17]** |
+| E6 without GAN-augmented training | 8.1% ± 2.1 | 0.20 | −12.6% | **−0.58 [−0.91, −0.30]** |
+| E6 without the risk penalty | 10.5% ± 3.9 | 0.40 | −16.1% | **−0.38 [−0.54, −0.25]** |
+
+E3 and E5 (news features) were skipped: no historical news. The generator failed its
+quality gates in all three folds.
+
+What this shows: **no configuration beats equal weight.** The full system matches it
+(difference indistinguishable from zero) and is the most stable across seeds; every
+simpler RL variant and every ablation is significantly worse. Removing GAN-augmented
+training hurts most — but the generator fails its realism gates, so the benefit is more
+likely regularisation (noise that limits over-fitting) than realistic scenarios; that has
+not been tested yet.
 <!-- experiments:end -->
 
 **Deployment model** (`rl-deployment-45a0448607`, what `POST /rl/allocate` uses).
@@ -154,10 +176,11 @@ pass, cross-asset correlation and the real-vs-synthetic classifier fail (the cla
 is 100% accurate). Its market-stress scenarios lose about 3% at worst over 24 sessions;
 the real 2020 crash window lost 33%.
 
-**LLM engine** (local `qwen2.5:3b`, 24 fictional test cases): schema-valid 100%,
-sentiment 85%, event type 65%, refused to invent from thin articles 100%, resisted
-prompt injection 33% (the engine's own heuristic flagged all three attempts).
-OpenAI has not been measured.
+**LLM engine** (24 hand-labelled fictional test cases). OpenAI `gpt-6-luna`: 100% on
+every measure, including all three prompt-injection attempts, 3.8 s per article. Local
+`qwen2.5:3b`: sentiment 85%, event type 65%, resisted injection 1 of 3 (the engine's own
+heuristic flagged all three). A perfect score means the test set is too easy; it is a
+smoke test, not a benchmark, and real-headline accuracy is unmeasured.
 
 ## Tests
 

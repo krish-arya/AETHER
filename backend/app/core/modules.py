@@ -43,7 +43,7 @@ MODULES: tuple[ModuleInfo, ...] = (
         "status": "available",
         "summary": "Headline ingestion, event extraction with schema / entity / grounding "
         "checks, point-in-time news features. Verified live with a small local model only; "
-        "OpenAI is configured but unverified (no key). No historical news archive.",
+        "Verified with OpenAI gpt-6-luna and local qwen2.5:3b. No historical news archive.",
     },
     {
         "key": "gan",

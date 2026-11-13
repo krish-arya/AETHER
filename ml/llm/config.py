@@ -194,14 +194,30 @@ class LLMEnvironment(BaseSettings):
     model: str | None = None
     embedding_model: str | None = None
     api_key: SecretStr | None = None
+    # Hosted reasoning models (e.g. OpenAI gpt-6-luna) reject ``max_tokens`` and any
+    # non-default temperature: set MAX_TOKENS_PARAM=max_completion_tokens and
+    # TEMPERATURE=default (omit the parameter) for them.
+    max_tokens_param: Literal["max_tokens", "max_completion_tokens"] | None = None
+    max_tokens: int | None = Field(None, ge=1)
+    temperature: str | None = None
 
     def apply(self, config: LLMConfig) -> LLMConfig:
-        return config.with_provider(
+        updated = config.with_provider(
             name=self.provider or None,
             base_url=self.base_url or None,
             model=self.model or None,
             embedding_model=self.embedding_model or None,
+            max_tokens_param=self.max_tokens_param,
+            max_tokens=self.max_tokens,
         )
+        if self.temperature:
+            text = self.temperature.strip().lower()
+            value = None if text == "default" else float(text)
+            provider = ProviderConfig.model_validate(
+                {**updated.provider.model_dump(), "temperature": value}
+            )
+            updated = updated.model_copy(update={"provider": provider})
+        return updated
 
     @property
     def key(self) -> str | None:

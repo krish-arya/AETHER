@@ -39,6 +39,12 @@ def main() -> int:
     parser.add_argument("--max-folds", type=int, default=None)
     parser.add_argument("--timesteps", type=int, default=None, help="Override PPO total_timesteps")
     parser.add_argument("--seeds", nargs="+", type=int, default=None)
+    parser.add_argument(
+        "--news-features",
+        type=Path,
+        default=None,
+        help="CSV from scripts/build_news_history.py features (enables E3/E5)",
+    )
     args = parser.parse_args()
 
     cfg = ExperimentConfig.from_yaml(args.config)
@@ -55,6 +61,8 @@ def main() -> int:
         cfg.rl.eval_every = max(args.timesteps // 4, 64)
     if args.seeds:
         cfg.rl.seeds = args.seeds
+    if args.news_features:
+        cfg.news_features = args.news_features
 
     report = run_experiments(cfg)
     summary = report.summary
